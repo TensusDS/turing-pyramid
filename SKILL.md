@@ -727,6 +727,6 @@ Summary: 3 action(s), 0 noticed
 
 ---
 
-**Version:** 1.33.9 — ClawHub safety clarification, safe publish defaults, watchdog detect-only by default.
+**Version:** 1.34.1 — Runtime housekeeping, git drift scanner, PII cleanup, decisions.log.
 
 Full changelog: `CHANGELOG.md` | Tuning guide: `references/TUNING.md`

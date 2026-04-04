@@ -1,7 +1,7 @@
 {
   "_meta": {
     "name": "Turing Pyramid — Agent Needs Configuration",
-    "version": "1.33.9",
+    "version": "1.34.1",
     "author": "turing-pyramid contributors",
     "created": "2026-02-22",
     "updated": "2026-03-23",
@@ -821,7 +821,7 @@
         "echo_duration_hours": 24
       }
     },
-    "version": "1.33.9",
+    "version": "1.34.1",
     "tension_formula": {
       "mode": "turing_exp",
       "crisis_threshold": 1.0,
