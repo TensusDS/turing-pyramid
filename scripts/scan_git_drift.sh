@@ -25,10 +25,12 @@ EXCLUDE_PATTERNS=(
     "last-scan-snapshot.json"
     "active-preset.json"
     "mindstate-prev-snapshot.json"
+    "mindstate-config.json"
     "audit.log"
     "followups.jsonl"
     "*.lock"
     "archive/"
+    "backups/"
     ".git/"
     ".clawhub/"
 )
