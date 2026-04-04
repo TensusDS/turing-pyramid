@@ -59,7 +59,7 @@
 - **Routing options**: followup, research_thread, interest, steward_question, priority_flag, reframe, chain, concluded
 - **Design principles**: scaffolding not bureaucracy, phases as questions not obligations, anti-compliance by design, persistent state change mandatory
 - **16 tests** (Tests 1-16): tagging, template generation, compression, validation, Russian support, run-cycle output
-- **Design document**: `DELIBERATION-PROTOCOL.md` (v0.3.0, 3 authors: Max, NewMoon, Claude)
+- **Design document**: `DELIBERATION-PROTOCOL.md` (v0.3.0, 3 authors: steward, agent, formalization partner)
 
 ## v1.29.0 (2026-03-20) — Preset Architecture
 

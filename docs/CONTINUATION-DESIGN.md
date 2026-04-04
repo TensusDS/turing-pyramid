@@ -1,13 +1,13 @@
 # Continuation & Association Scan — Design Document
 
-**Version:** 0.1.1 (revised per NewMoon implementation review)
-**Authors:** Max (steward), NewMoon (agent/co-designer), Claude (formalization)
+**Version:** 0.1.1 (revised per agent implementation review)
+**Authors:** steward, agent (agent/co-designer), Claude (formalization)
 **Depends on:** Turing Pyramid v1.31.x, Deliberation Protocol v0.3.0
 **Date:** 2026-03-24
 
 **Revision history:**
 - v0.1.0 — Initial design
-- v0.1.1 — NewMoon review fixes: pipe subshell bug in boot keywords, bc truncation → printf rounding, audit.log pre-filter for performance, feedback loop prevention (exclude MINDSTATE residuals from boot corpus)
+- v0.1.1 — agent review fixes: pipe subshell bug in boot keywords, bc truncation → printf rounding, audit.log pre-filter for performance, feedback loop prevention (exclude MINDSTATE residuals from boot corpus)
 
 ---
 
@@ -29,7 +29,7 @@ The existing architecture covers most of the continuation spectrum:
 
 | Mechanism | What it handles | Limitation |
 |-----------|----------------|------------|
-| **Followups** (create-followup.sh) | Explicit time-bound reminders | Max 1w horizon. Agent must explicitly create them. |
+| **Followups** (create-followup.sh) | Explicit time-bound reminders | steward 1w horizon. Agent must explicitly create them. |
 | **MINDSTATE** (freeze/boot) | Cross-session vector, trajectory, open threads | No awareness of past deliberation outcomes. No association with current context. |
 | **Spontaneity** (Layer A/B/C) | Random variation, boredom-driven novelty | Blind — no connection to past thoughts |
 | **Deliberation** (ROUTE phase) | Explicit routing of outcomes | "concluded (with action)" falls through |
@@ -68,12 +68,12 @@ association-scan.sh
   ├─ Called by: mindstate-boot.sh (session start)
   │   Input: high-tension needs + MINDSTATE residuals
   │   Purpose: "woke up — what's relevant from before?"
-  │   Max results: 5
+  │   steward results: 5
   │
   └─ Called by: agent during deliberation RELATE+TENSION phase
       Input: current deliberation topic/action
       Purpose: "thinking about X — anything related from the past?"
-      Max results: 3
+      steward results: 3
 ```
 
 The script is stateless — it reads existing files, matches keywords, ranks by relevance + recency, and outputs results. It creates no files, modifies no state, and has no side effects.
@@ -623,7 +623,7 @@ These residuals are then available to mindstate-boot.sh (read as part of open th
 
 ### 7.1 Problem
 
-NewMoon demonstrated that "concluded (with action: update INTENTIONS.md in next coherence cycle)" is a real pattern — the agent writes "concluded" but the outcome contains an implicit next step.
+agent demonstrated that "concluded (with action: update INTENTIONS.md in next coherence cycle)" is a real pattern — the agent writes "concluded" but the outcome contains an implicit next step.
 
 ### 7.2 Implementation in deliberate.sh
 
@@ -660,7 +660,7 @@ Warning only, never block. Agent can consciously decide "yes, it's truly conclud
 
 ### 8.1 Problem
 
-`create-followup.sh` currently supports: h (hours), d (days), w (weeks). Max practical horizon: 1w. "Revisit after 2 weeks" or "check in a month" can't be expressed.
+`create-followup.sh` currently supports: h (hours), d (days), w (weeks). steward practical horizon: 1w. "Revisit after 2 weeks" or "check in a month" can't be expressed.
 
 ### 8.2 Implementation
 
@@ -708,7 +708,7 @@ Too-broad scanning produces noise: everything reminds the agent of everything, a
 
 | Safeguard | Mechanism | Default |
 |-----------|-----------|---------|
-| **Max results per call** | `--max-results` parameter | 3 (deliberation), 5 (boot) |
+| **steward results per call** | `--max-results` parameter | 3 (deliberation), 5 (boot) |
 | **Minimum score threshold** | `--min-score` parameter | 2 (requires at least 1 keyword hit + bonus) |
 | **Recency window** | `--recency-hours` parameter | 168h (1 week) for deliberation, 336h (2 weeks) for boot |
 | **Head-only file reading** | `head -20` / `head -30` | Prevents scanning entire documents |
