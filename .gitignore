@@ -3,6 +3,7 @@ assets/needs-state.json
 assets/needs-state.backup.json
 assets/pending_actions.json
 assets/audit.log
+assets/decisions.log
 assets/followups.jsonl
 assets/last-scan-snapshot.json
 assets/mindstate-prev-snapshot.json

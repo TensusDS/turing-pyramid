@@ -27,6 +27,7 @@ EXCLUDE_PATTERNS=(
     "mindstate-prev-snapshot.json"
     "mindstate-config.json"
     "audit.log"
+    "decisions.log"
     "followups.jsonl"
     "*.lock"
     "archive/"

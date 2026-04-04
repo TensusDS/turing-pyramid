@@ -21,15 +21,29 @@ MAX_PENDING_RESOLVED="${TP_MAX_PENDING_RESOLVED:-50}"  # keep N most recent reso
 cleaned=0
 log() { echo "[housekeep] $*"; }
 
-# ─── 1. audit.log rotation ────────────────────────────────────
+# ─── 1. audit.log rotation (extract → digest → trim) ─────────
 AUDIT_LOG="$ASSETS_DIR/audit.log"
+DIGEST_FILE="$ASSETS_DIR/decisions.log"
 if [[ -f "$AUDIT_LOG" ]]; then
     lines=$(wc -l < "$AUDIT_LOG")
     if [[ "$lines" -gt "$MAX_AUDIT_LINES" ]]; then
         keep=$((MAX_AUDIT_LINES / 2))
+        to_purge=$((lines - keep))
+        
+        # Extract significant entries before purging:
+        # - Has a real reason (not "no reason given", not test)
+        # - Has a conclusion
+        # - High impact (>=2.0)
+        head -n "$to_purge" "$AUDIT_LOG" | jq -c 'select(
+            (.conclusion != null and .conclusion != "") or
+            (.impact >= 2.0) or
+            (.reason != null and .reason != "(no reason given)" and (.reason | test("test|ceiling|floor|manual"; "i") | not))
+        )' >> "$DIGEST_FILE" 2>/dev/null
+        
+        # Now trim
         tmp=$(mktemp)
         tail -n "$keep" "$AUDIT_LOG" > "$tmp" && mv "$tmp" "$AUDIT_LOG"
-        log "audit.log: rotated $lines → $keep lines"
+        log "audit.log: rotated $lines → $keep lines (significant entries → decisions.log)"
         ((cleaned++))
     fi
 fi
@@ -50,6 +64,16 @@ PENDING_FILE="$ASSETS_DIR/pending_actions.json"
 if [[ -f "$PENDING_FILE" ]]; then
     total_resolved=$(jq '[.actions[] | select(.status == "COMPLETED" or .status == "FAILED" or .status == "DEFERRED")] | length' "$PENDING_FILE" 2>/dev/null)
     if [[ -n "$total_resolved" && "$total_resolved" -gt "$MAX_PENDING_RESOLVED" ]]; then
+        # Extract decisions from entries about to be purged → decisions.log
+        jq -c '[
+            .actions[]
+            | select(.status != "PENDING")
+            | select(.evidence != null or .resolution != null)
+        ] | sort_by(.resolved_at // .proposed_at) | reverse | .['\'"$MAX_PENDING_RESOLVED"\'':][] |
+        {type: "action", timestamp: (.resolved_at // .proposed_at),
+         need, action: .action_name, status, evidence, resolution, defer_reason}' \
+         "$PENDING_FILE" >> "$DIGEST_FILE" 2>/dev/null
+        
         # Keep: all PENDING + N most recent resolved (by resolved_at)
         tmp=$(mktemp)
         jq --argjson keep "$MAX_PENDING_RESOLVED" '
@@ -61,7 +85,7 @@ if [[ -f "$PENDING_FILE" ]]; then
           .completed_count = ([.actions[] | select(.status=="COMPLETED")] | length) |
           .deferred_count = ([.actions[] | select(.status=="DEFERRED")] | length)
         ' "$PENDING_FILE" > "$tmp" && mv "$tmp" "$PENDING_FILE"
-        log "pending_actions: compacted (kept $MAX_PENDING_RESOLVED resolved, was $total_resolved)"
+        log "pending_actions: compacted (kept $MAX_PENDING_RESOLVED resolved, was $total_resolved; decisions → decisions.log)"
         ((cleaned++))
     fi
 fi
