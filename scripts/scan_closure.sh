@@ -20,6 +20,15 @@ neg_signals=0
 scan_lines_in_file "$MEMORY_DIR/$TODAY.md" "$POS_PATTERN" "$NEG_PATTERN"
 scan_lines_in_file "$MEMORY_DIR/$YESTERDAY.md" "$POS_PATTERN" "$NEG_PATTERN"
 
+# Git drift check — uncommitted TP changes count as open items
+git_drift=$($SCRIPT_DIR/scan_git_drift.sh 2>/dev/null)
+if [[ "$git_drift" == drift:* ]]; then
+    drift_count=${git_drift#drift:}
+    drift_count=${drift_count%% *}
+    # Each drifted file = 1 neg signal (open work not committed)
+    neg_signals=$((neg_signals + drift_count))
+fi
+
 net=$((pos_signals - neg_signals))
 
 if [[ $neg_signals -gt $pos_signals ]] && [[ $neg_signals -gt 5 ]]; then
