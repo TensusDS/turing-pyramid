@@ -34,6 +34,8 @@ EXCLUDE_PATTERNS=(
     "backups/"
     ".git/"
     ".clawhub/"
+    "_meta.json"
+    "docs/"
 )
 
 # Build rsync exclude args
