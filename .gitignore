@@ -1,0 +1,21 @@
+# Runtime state — never commit these
+assets/needs-state.json
+assets/needs-state.backup.json
+assets/pending_actions.json
+assets/audit.log
+assets/followups.jsonl
+assets/last-scan-snapshot.json
+assets/mindstate-prev-snapshot.json
+assets/active-preset.json
+assets/mindstate-config.json
+assets/mindstate.lock
+assets/cycle.lock
+assets/gate.lock
+assets/*.lock
+assets/*.tmp.*
+assets/backups/
+.clawhub/
+
+# OS
+.DS_Store
+Thumbs.db
