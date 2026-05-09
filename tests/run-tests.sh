@@ -20,23 +20,25 @@ run_test() {
     local test_file="$1"
     local test_name="$(basename "$test_file" .sh)"
     
-    if [[ ! -x "$test_file" ]]; then
-        echo -e "${YELLOW}SKIP${NC} $test_name (not executable)"
-        ((SKIPPED++)) || true
-        return
-    fi
+    # Execute with bash even if executable bit was lost in packaging.
+    # Tests are never silently skipped: a present test file must pass or fail.
     
-    # Clear stale lock files and gate state before each test
+    # Reset needs state + clear lock files and gate state before each test
+    [[ -f "$SKILL_DIR/assets/needs-state.template.json" ]] && cp "$SKILL_DIR/assets/needs-state.template.json" "$SKILL_DIR/assets/needs-state.json" 2>/dev/null || true
     rm -f "$SKILL_DIR"/assets/*.lock 2>/dev/null || true
     rm -f "$SKILL_DIR"/assets/pending_actions.json "$SKILL_DIR"/assets/gate.lock 2>/dev/null || true
     
-    if WORKSPACE="$SKILL_DIR" SKIP_GATE=true "$test_file" >/dev/null 2>&1; then
+    output_file=$(mktemp)
+    if WORKSPACE="$SKILL_DIR" SKIP_GATE=true SKIP_DAEMON_FORCE=true timeout "${TEST_TIMEOUT_SECONDS:-60}" bash "$test_file" >"$output_file" 2>&1; then
         echo -e "${GREEN}PASS${NC} $test_name"
         ((PASSED++)) || true
     else
-        echo -e "${RED}FAIL${NC} $test_name"
+        status=$?
+        echo -e "${RED}FAIL${NC} $test_name (exit $status)"
+        sed 's/^/    | /' "$output_file" | tail -80
         ((FAILED++)) || true
     fi
+    rm -f "$output_file"
 }
 
 run_suite() {
@@ -68,9 +70,14 @@ case "${1:-all}" in
     integration)
         run_suite "$SCRIPT_DIR/integration"
         ;;
+    regression)
+        run_suite "$SCRIPT_DIR/regression"
+        ;;
     all)
         run_suite "$SCRIPT_DIR/unit"
         run_suite "$SCRIPT_DIR/integration"
+        run_suite "$SCRIPT_DIR/regression"
+        run_suite "$SCRIPT_DIR"
         ;;
     *)
         echo "Usage: $0 [unit|integration|all]"

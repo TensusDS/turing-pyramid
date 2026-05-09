@@ -29,6 +29,27 @@ if [[ "$git_drift" == drift:* ]]; then
     neg_signals=$((neg_signals + drift_count))
 fi
 
+# Deferred backlog pressure — accumulating dropped items add psychological weight
+# Implements declared check: deferred_backlog_size
+# _ASSETS_DIR is already set by _scan_helper.sh (respects SCAN_ASSETS_DIR / MINDSTATE_ASSETS_DIR)
+PENDING_FILE="$_ASSETS_DIR/pending_actions.json"
+if [[ -f "$PENDING_FILE" ]]; then
+    deferred_count=$(jq -r '[.actions[]? | select(.status == "DEFERRED")] | length' "$PENDING_FILE" 2>/dev/null || echo 0)
+    # Pressure bands calibrated to scan_closure cascade thresholds:
+    # cascade: neg>5 → event_sat=0, neg>3 → event_sat=1
+    # <5 deferred  → no boost (normal)
+    # 5-10         → +2 neg (pushes to event_sat=1 territory)
+    # 11-20        → +4 neg (event_sat=1, noticeable pressure)
+    # >20          → +6 neg (event_sat=0, backlog paralysis)
+    if (( deferred_count > 20 )); then
+        neg_signals=$((neg_signals + 6))
+    elif (( deferred_count > 10 )); then
+        neg_signals=$((neg_signals + 4))
+    elif (( deferred_count > 5 )); then
+        neg_signals=$((neg_signals + 2))
+    fi
+fi
+
 net=$((pos_signals - neg_signals))
 
 if [[ $neg_signals -gt $pos_signals ]] && [[ $neg_signals -gt 5 ]]; then

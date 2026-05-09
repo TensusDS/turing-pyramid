@@ -42,7 +42,7 @@ git commit -m "test: add regression test for gate timeout"
 ```bash
 git push origin feat/short-description
 # Create PR: feat/short-description → develop
-# Add TensusDS as reviewer
+# Add a maintainer as reviewer
 ```
 
 ### 6. Review → Merge

@@ -11,6 +11,56 @@ fi
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$SKILL_DIR/assets/needs-config.json"
+STATE_FILE="$SKILL_DIR/assets/needs-state.json"
+TEMPLATE_FILE="$SKILL_DIR/assets/needs-state.template.json"
+SCRIPTS_DIR="$SKILL_DIR/scripts"
+
+require_command() {
+    local cmd="$1"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "❌ ERROR: required command not found: $cmd" >&2
+        exit 1
+    fi
+}
+
+initialize_state_if_missing() {
+    if [[ -f "$STATE_FILE" ]]; then
+        return 0
+    fi
+    if [[ ! -f "$TEMPLATE_FILE" ]]; then
+        echo "❌ ERROR: state file missing and template not found: $TEMPLATE_FILE" >&2
+        exit 1
+    fi
+
+    local now
+    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    mkdir -p "$(dirname "$STATE_FILE")"
+    jq --arg now "$now" '
+      ._meta.initialized = $now |
+      ._meta.last_cycle = $now |
+      to_entries
+      | map(
+          if .key == "_meta" then .
+          elif (.value | type) == "object" then
+            .value.satisfaction = (.value.satisfaction // 3.0) |
+            .value.last_satisfied = (.value.last_satisfied // $now) |
+            .value.last_decay_check = (.value.last_decay_check // $now) |
+            .value.surplus = (.value.surplus // 0) |
+            .value.last_surplus_check = (.value.last_surplus_check // $now) |
+            .value.last_high_action_at = (.value.last_high_action_at // $now) |
+            .value.last_spontaneous_at = (.value.last_spontaneous_at // $now) |
+            .
+          else . end
+        )
+      | from_entries
+    ' "$TEMPLATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+    echo "ℹ️  Initialized missing state from template: $STATE_FILE" >&2
+}
+
+require_command jq
+require_command bc
+require_command flock
+initialize_state_if_missing
 
 # Turing-exp formula: tension = dep² + importance × max(0, dep - crisis_threshold)²
 # At homeostasis (dep < threshold): all needs equal (dep² only)
@@ -20,18 +70,12 @@ CRISIS_THRESHOLD=$(jq -r '.settings.tension_formula.crisis_threshold // 1.0' "$C
 # MAX_TENSION = 3² + max_imp × (3 - threshold)² [dep=3 worst case]
 MAX_CRISIS_EXCESS=$(echo "scale=2; 3 - $CRISIS_THRESHOLD" | bc -l)
 MAX_TENSION=$(echo "scale=1; 9 + ($MAX_IMPORTANCE * $MAX_CRISIS_EXCESS * $MAX_CRISIS_EXCESS)" | bc -l)
-STATE_FILE="$SKILL_DIR/assets/needs-state.json"
-SCRIPTS_DIR="$SKILL_DIR/scripts"
 source "$SCRIPTS_DIR/spontaneity.sh"
 WORKSPACE="$WORKSPACE"
 MEMORY_DIR="$WORKSPACE/memory"
 LOGS_DIR="$WORKSPACE/memory/logs"
 
-# Check initialization
-if [[ ! -f "$STATE_FILE" ]]; then
-    echo "❌ Turing Pyramid not initialized. Run: $SCRIPTS_DIR/init.sh"
-    exit 1
-fi
+# State is initialized before calculations so fresh installs can run safely.
 
 # Acquire exclusive lock — skip if another cycle is already running
 LOCK_FILE="$SKILL_DIR/assets/cycle.lock"
@@ -46,7 +90,7 @@ NOW_ISO=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 TODAY=$(date +%Y-%m-%d)
 
 # Bootstrap mode: process ALL needs (also skips gate — clean slate)
-if [[ "$1" == "--bootstrap" ]]; then
+if [[ "${1:-}" == "--bootstrap" ]]; then
     MAX_ACTIONS=10
     SKIP_GATE=true
     echo "🚀 BOOTSTRAP MODE — processing all needs"
@@ -71,7 +115,7 @@ fi
 
 # No-scans mode for testing (env or arg)
 SKIP_SCANS="${SKIP_SCANS:-false}"
-if [[ "$1" == "--no-scans" || "$2" == "--no-scans" ]]; then
+if [[ "${1:-}" == "--no-scans" || "${2:-}" == "--no-scans" ]]; then
     SKIP_SCANS=true
 fi
 if [[ "$SKIP_SCANS" == "true" ]]; then
@@ -751,6 +795,10 @@ create_auto_followup() {
     fi
 }
 
+if [[ "${TURING_PYRAMID_SOURCE_ONLY:-false}" == "true" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
+
 # Main execution
 echo "🔺 Turing Pyramid — Cycle at $(date)"
 echo "======================================"
@@ -979,6 +1027,18 @@ for need in "${top_needs_array[@]}"; do
             
             # Output execution instructions based on action mode
             if [[ "${action_mode:-operative}" == "deliberative" ]]; then
+                # Show recent deliberation discipline (rolling window, last 10)
+                DELIB_LOG="$SCRIPTS_DIR/../assets/deliberation.log"
+                if [[ -f "$DELIB_LOG" ]]; then
+                    recent_resolved=$(tail -30 "$DELIB_LOG" 2>/dev/null | grep '"event":"resolved"' | tail -10)
+                    if [[ -n "$recent_resolved" ]]; then
+                        recent_skipped=$(echo "$recent_resolved" | grep -c '"level":"absent"' || echo 0)
+                        recent_total=$(echo "$recent_resolved" | wc -l | tr -d ' ')
+                        if (( recent_skipped >= 2 && recent_total > 0 )); then
+                            echo "  ⚠  recent discipline: $recent_skipped/$recent_total deliberations skipped"
+                        fi
+                    fi
+                fi
                 echo "  Protocol: Think → conclude → route. Options:"
                 echo "    deliberate.sh --template --need $need --action \"$selected_action\""
                 echo "    deliberate.sh --validate <your-file>"

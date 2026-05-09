@@ -328,7 +328,7 @@ bash "$SCRIPTS/gate-propose.sh" --need understanding --action "re-read recent le
 # Mark satisfied first so evidence verification passes
 bash "$SCRIPTS/mark-satisfied.sh" understanding 0.2 --reason "test" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" --need understanding --evidence "test resolve" 2>&1)
-if echo "$output" | grep -q "Deliberative action resolved without --conclusion"; then
+if echo "$output" | grep -qE "(Deliberative action resolved without|marked as 'absent')"; then
     echo "  Warning emitted for deliberative without conclusion — OK"
 else
     echo "  FAIL: Expected deliberative warning"
@@ -453,7 +453,7 @@ cleanup_gate
 bash "$SCRIPTS/gate-propose.sh" --need understanding --action "re-read recent learning notes" --impact 0.2 >/dev/null 2>&1
 bash "$SCRIPTS/mark-satisfied.sh" understanding 0.2 --reason "test" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" --need understanding --evidence "test" --conclusion "" 2>&1)
-if echo "$output" | grep -q "Deliberative action resolved without --conclusion"; then
+if echo "$output" | grep -qE "(Deliberative action resolved without|marked as 'absent')"; then
     echo "  Empty conclusion triggers warning — OK"
 else
     echo "  FAIL: Empty conclusion should trigger warning for deliberative"
