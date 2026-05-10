@@ -727,6 +727,6 @@ Summary: 3 action(s), 0 noticed
 
 ---
 
-**Version:** 1.34.8 — Self-throttle race fix: daemon --force flag, boot always gets fresh reality, test isolation improved (state reset + SKIP_DAEMON_FORCE).
+**Version:** 1.34.10 — Test timeout calibration + metadata sync: default runner timeout matches long integration/stress tests; package metadata and skill footer are synchronized.
 
 Full changelog: `CHANGELOG.md` | Tuning guide: `references/TUNING.md`

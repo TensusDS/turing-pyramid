@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.34.10 (2026-05-10) — Test timeout calibration + metadata sync
+- **Default test timeout calibrated**: `tests/run-tests.sh` now defaults to 300s per test so long-running integration/stress tests do not fail spuriously at 60s.
+- **Version metadata synchronized**: `_meta.json` and the `SKILL.md` footer now both report `1.34.10`.
+- **35/35 tests green, 0 skipped** with the default runner.
+
 ## v1.34.9 (2026-05-09) — Run-cycle startup resilience + full test enforcement
 - **Fresh-install resilience**: `run-cycle.sh` now validates required binaries early and initializes `assets/needs-state.json` from the template when state is missing, so a clean ClawHub install can run without a manual init dead-end.
 - **Source-only mode for tests**: `TURING_PYRAMID_SOURCE_ONLY=true` lets tests source `run-cycle.sh` helper functions without accidentally executing a full cycle.

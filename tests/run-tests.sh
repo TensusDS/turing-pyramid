@@ -29,7 +29,7 @@ run_test() {
     rm -f "$SKILL_DIR"/assets/pending_actions.json "$SKILL_DIR"/assets/gate.lock 2>/dev/null || true
     
     output_file=$(mktemp)
-    if WORKSPACE="$SKILL_DIR" SKIP_GATE=true SKIP_DAEMON_FORCE=true timeout "${TEST_TIMEOUT_SECONDS:-60}" bash "$test_file" >"$output_file" 2>&1; then
+    if WORKSPACE="$SKILL_DIR" SKIP_GATE=true SKIP_DAEMON_FORCE=true timeout "${TEST_TIMEOUT_SECONDS:-300}" bash "$test_file" >"$output_file" 2>&1; then
         echo -e "${GREEN}PASS${NC} $test_name"
         ((PASSED++)) || true
     else

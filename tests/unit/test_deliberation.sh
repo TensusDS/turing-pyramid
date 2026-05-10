@@ -63,10 +63,10 @@ fi
 # ─── Test 4: deliberate.sh --template (full) ───
 echo "Test 4: Template mode (full pipeline)"
 output=$(bash "$SCRIPTS/deliberate.sh" --template --need understanding --action "explore one topic briefly — note insight" 2>&1)
-if echo "$output" | grep -q "DELIBERATION:.*understanding" && \
-   echo "$output" | grep -q "Phase 1: REPRESENT" && \
-   echo "$output" | grep -q "Phase 5: CONCLUDE" && \
-   echo "$output" | grep -q "Phase 6: ROUTE"; then
+if grep -q "DELIBERATION:.*understanding" <<< "$output" && \
+   grep -q "Phase 1: REPRESENT" <<< "$output" && \
+   grep -q "Phase 5: CONCLUDE" <<< "$output" && \
+   grep -q "Phase 6: ROUTE" <<< "$output"; then
     echo "  Full template generated with all phases — OK"
 else
     echo "  FAIL: Missing phases in template output"
@@ -77,10 +77,10 @@ fi
 # ─── Test 5: deliberate.sh --template (compressed for low-impact) ───
 echo "Test 5: Template auto-compresses for impact < 1.0"
 output=$(bash "$SCRIPTS/deliberate.sh" --template --need understanding --action "re-read recent learning notes" 2>&1)
-if echo "$output" | grep -q "\[compressed\]" && \
-   echo "$output" | grep -q "REPRESENT" && \
-   echo "$output" | grep -q "CONCLUDE" && \
-   ! echo "$output" | grep -q "Phase 2: RELATE"; then
+if grep -q "\[compressed\]" <<< "$output" && \
+   grep -q "REPRESENT" <<< "$output" && \
+   grep -q "CONCLUDE" <<< "$output" && \
+   ! grep -q "Phase 2: RELATE" <<< "$output"; then
     echo "  Compressed template (no RELATE/GENERATE/EVALUATE) — OK"
 else
     echo "  FAIL: Expected compressed template for impact 0.2"
@@ -91,7 +91,7 @@ fi
 # ─── Test 6: deliberate.sh --template warns for non-deliberative ───
 echo "Test 6: Template warns for non-deliberative action"
 output=$(bash "$SCRIPTS/deliberate.sh" --template --need security --action "run full backup + integrity verification" 2>&1)
-if echo "$output" | grep -q "not tagged deliberative"; then
+if grep -q "not tagged deliberative" <<< "$output"; then
     echo "  Warning emitted for operative action — OK"
 else
     echo "  FAIL: Should warn about non-deliberative action"
@@ -114,7 +114,7 @@ Confidence: medium
 MDEOF
 
 output=$(bash "$SCRIPTS/deliberate.sh" --validate "$TMP_DIR/good-delib.md" 2>&1)
-if echo "$output" | grep -q "\[PASS\]"; then
+if grep -q "\[PASS\]" <<< "$output"; then
     echo "  File with conclusion + route + confidence passes — OK"
 else
     echo "  FAIL: Expected PASS for good file"
@@ -152,7 +152,7 @@ cat > "$TMP_DIR/ru-delib.md" << 'MDEOF'
 MDEOF
 
 output=$(bash "$SCRIPTS/deliberate.sh" --validate "$TMP_DIR/ru-delib.md" 2>&1)
-if echo "$output" | grep -q "\[PASS\]"; then
+if grep -q "\[PASS\]" <<< "$output"; then
     echo "  Russian file passes validation — OK"
 else
     echo "  FAIL: Russian file should pass"
@@ -165,7 +165,7 @@ echo "Test 10: Validate-inline — passing"
 output=$(bash "$SCRIPTS/deliberate.sh" --validate-inline \
     --conclusion "H2S is not a reliable biosignature" \
     --route "research_thread" 2>&1)
-if echo "$output" | grep -q "\[PASS\]"; then
+if grep -q "\[PASS\]" <<< "$output"; then
     echo "  Inline validation passes — OK"
 else
     echo "  FAIL: Expected PASS for valid inline"
@@ -188,7 +188,7 @@ output=$(bash "$SCRIPTS/deliberate.sh" --validate-inline \
     --conclusion "not sure about this" \
     --route "concluded" \
     --confidence "low" 2>&1)
-if echo "$output" | grep -q "Low-confidence conclusion with no followup"; then
+if grep -q "Low-confidence conclusion with no followup" <<< "$output"; then
     echo "  Low-confidence warning emitted — OK"
 else
     echo "  FAIL: Expected low-confidence warning"
@@ -201,7 +201,7 @@ echo "Test 13: Unknown route warning"
 output=$(bash "$SCRIPTS/deliberate.sh" --validate-inline \
     --conclusion "some conclusion" \
     --route "magic_portal" 2>&1)
-if echo "$output" | grep -q "Unknown route: magic_portal"; then
+if grep -q "Unknown route: magic_portal" <<< "$output"; then
     echo "  Unknown route warning emitted — OK"
 else
     echo "  FAIL: Expected unknown route warning"
@@ -226,14 +226,14 @@ combined_output=""
 for attempt in 1 2 3 4 5; do
     output=$(WORKSPACE="$SKILL_DIR" SKIP_GATE=true bash "$SCRIPTS/run-cycle.sh" 2>&1 || true)
     combined_output="${combined_output}${output}"
-    if echo "$output" | grep -q "\[DELIBERATIVE\]"; then
+    if grep -q "\[DELIBERATIVE\]" <<< "$output"; then
         found_deliberative=true
     fi
-    if echo "$output" | grep -q "deliberate.sh"; then
+    if grep -q "deliberate.sh" <<< "$output"; then
         found_protocol=true
     fi
     # Check for operative action with simple "Then: mark-satisfied" (no --conclusion)
-    if echo "$output" | grep "Then: mark-satisfied.sh" | grep -qv "\-\-conclusion"; then
+    if grep "Then: mark-satisfied.sh" <<< "$output" | grep -qv "\-\-conclusion"; then
         found_operative_simple=true
     fi
     if $found_deliberative && $found_protocol && $found_operative_simple; then
@@ -328,7 +328,7 @@ bash "$SCRIPTS/gate-propose.sh" --need understanding --action "re-read recent le
 # Mark satisfied first so evidence verification passes
 bash "$SCRIPTS/mark-satisfied.sh" understanding 0.2 --reason "test" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" --need understanding --evidence "test resolve" 2>&1)
-if echo "$output" | grep -qE "(Deliberative action resolved without|marked as 'absent')"; then
+if grep -qE "(Deliberative action resolved without|marked as 'absent')" <<< "$output"; then
     echo "  Warning emitted for deliberative without conclusion — OK"
 else
     echo "  FAIL: Expected deliberative warning"
@@ -344,7 +344,7 @@ bash "$SCRIPTS/gate-propose.sh" --need understanding --action "re-read recent le
 bash "$SCRIPTS/mark-satisfied.sh" understanding 0.2 --reason "test" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" --need understanding --evidence "test" --conclusion "found tension between X and Y" 2>&1)
 resolution=$(jq -r '.actions[0].resolution' "$GATE_FILE")
-if echo "$resolution" | grep -q "conclusion: found tension between X and Y"; then
+if grep -q "conclusion: found tension between X and Y" <<< "$resolution"; then
     echo "  Conclusion in resolution field — OK"
 else
     echo "  FAIL: Conclusion not in resolution"
@@ -352,7 +352,7 @@ else
     ((errors++)) || true
 fi
 # Also verify no warning was emitted
-if echo "$output" | grep -q "Deliberative action resolved without"; then
+if grep -q "Deliberative action resolved without" <<< "$output"; then
     echo "  FAIL: Warning should NOT appear when conclusion provided"
     ((errors++)) || true
 fi
@@ -364,7 +364,7 @@ cleanup_gate
 bash "$SCRIPTS/gate-propose.sh" --need security --action "run full backup + integrity verification" --impact 3.0 >/dev/null 2>&1
 bash "$SCRIPTS/mark-satisfied.sh" security 3.0 --reason "backup done" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" --need security --evidence "backup completed" 2>&1)
-if echo "$output" | grep -q "Deliberative action resolved without"; then
+if grep -q "Deliberative action resolved without" <<< "$output"; then
     echo "  FAIL: Should NOT warn for operative actions"
     ((errors++)) || true
 else
@@ -379,7 +379,7 @@ cleanup_gate
 echo '{"actions":[{"id":"legacy_001","timestamp":"2026-03-23T00:00:00Z","source":"test","need":"coherence","action_name":"test","impact":0.5,"evidence_type":"mark_satisfied","status":"PENDING","resolved_at":null,"resolution":null,"defer_reason":null}],"gate_status":"BLOCKED","pending_count":1,"completed_count":0,"deferred_count":0}' > "$GATE_FILE"
 bash "$SCRIPTS/mark-satisfied.sh" coherence 0.5 --reason "test" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" legacy_001 --evidence "test legacy" 2>&1)
-if echo "$output" | grep -q "COMPLETED"; then
+if grep -q "COMPLETED" <<< "$output"; then
     echo "  Legacy action resolves without crash — OK"
 else
     echo "  FAIL: Legacy action should resolve normally"
@@ -387,7 +387,7 @@ else
     ((errors++)) || true
 fi
 # Verify no deliberative warning
-if echo "$output" | grep -q "Deliberative"; then
+if grep -q "Deliberative" <<< "$output"; then
     echo "  FAIL: Legacy action should not trigger deliberative warning"
     ((errors++)) || true
 fi
@@ -453,7 +453,7 @@ cleanup_gate
 bash "$SCRIPTS/gate-propose.sh" --need understanding --action "re-read recent learning notes" --impact 0.2 >/dev/null 2>&1
 bash "$SCRIPTS/mark-satisfied.sh" understanding 0.2 --reason "test" >/dev/null 2>&1 || true
 output=$(bash "$SCRIPTS/gate-resolve.sh" --need understanding --evidence "test" --conclusion "" 2>&1)
-if echo "$output" | grep -qE "(Deliberative action resolved without|marked as 'absent')"; then
+if grep -qE "(Deliberative action resolved without|marked as 'absent')" <<< "$output"; then
     echo "  Empty conclusion triggers warning — OK"
 else
     echo "  FAIL: Empty conclusion should trigger warning for deliberative"
